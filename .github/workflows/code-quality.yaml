@@ -1,0 +1,48 @@
+name: Code Quality & Unwanted File Check
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/*'
+  pull_request:
+
+jobs:
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Node.js setup (for ESLint)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Run ESLint
+      - name: Run ESLint
+        run: |
+          npx eslint . || exit 1
+
+      # Check for unwanted files
+      - name: Check for unwanted files
+        run: |
+          UNWANTED_FILES=".env node_modules *.log"
+          FOUND=false
+          for file in $UNWANTED_FILES; do
+            if git ls-files --error-unmatch $file > /dev/null 2>&1; then
+              echo "❌ Unwanted file found: $file"
+              FOUND=true
+            fi
+          done
+          if [ "$FOUND" = true ]; then
+            echo "❌ Unwanted files detected. Please remove them before push."
+            exit 1
+          fi

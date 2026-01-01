@@ -3,46 +3,60 @@ name: Code Quality & Unwanted File Check
 on:
   push:
     branches:
-      - main
-      - 'feature/*'
+      - master
+      - "feature/*"
   pull_request:
 
 jobs:
   code-quality:
-    name: Code Quality Check
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Node.js setup (for ESLint)
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
-      # Install dependencies
-      - name: Install dependencies
+      # ---------- Backend ----------
+      - name: Install backend dependencies
         run: npm install
+        working-directory: backend
 
-      # Run ESLint
-      - name: Run ESLint
-        run: |
-          npx eslint . || exit 1
+      - name: Run backend ESLint
+        run: npx eslint .
+        working-directory: backend
 
-      # Check for unwanted files
+      # ---------- Frontend ----------
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Run frontend ESLint
+        run: npx eslint .
+        working-directory: frontend
+
+      # ---------- Unwanted Files Check ----------
       - name: Check for unwanted files
         run: |
-          UNWANTED_FILES=".env node_modules *.log"
+          echo "Checking for unwanted tracked files..."
+
+          UNWANTED_FILES=(".env" "node_modules" "*.log")
+
           FOUND=false
-          for file in $UNWANTED_FILES; do
-            if git ls-files --error-unmatch $file > /dev/null 2>&1; then
-              echo "❌ Unwanted file found: $file"
+          for file in "${UNWANTED_FILES[@]}"; do
+            if git ls-files | grep -q "$file"; then
+              echo "❌ Unwanted file found in repo: $file"
               FOUND=true
             fi
           done
+
           if [ "$FOUND" = true ]; then
-            echo "❌ Unwanted files detected. Please remove them before push."
+            echo "❌ Remove unwanted files before pushing."
             exit 1
+          else
+            echo "✅ No unwanted files found."
           fi
+
